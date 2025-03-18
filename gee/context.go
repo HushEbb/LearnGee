@@ -1,6 +1,7 @@
 package gee
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -50,10 +51,21 @@ func (c *Context) String(code int, format string, values ...interface{}) {
 
 func (c *Context) JSON(code int, obj interface{}) {
 	c.SetHeader("Content-Type", "application/json")
-	c.Status(code)
-	encoder := json.NewEncoder(c.Writer)
+
+	// 先序列化到缓冲区
+	var buff bytes.Buffer
+	encoder := json.NewEncoder(&buff)
 	if err := encoder.Encode(obj); err != nil {
-		http.Error(c.Writer, err.Error(), 500)
+		// 确保状态码为 500，且未发送过头部
+		c.Status(http.StatusInternalServerError)
+		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 确认无错误后，设置状态码并写入数据
+	c.Status(code)
+	if _, err := c.Writer.Write(buff.Bytes()); err != nil {
+		// TODO: 处理写入错误（如记录日志）
 	}
 }
 
