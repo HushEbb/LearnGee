@@ -19,8 +19,11 @@ func FormatAsDate(t time.Time) string {
 }
 
 func main() {
-	r := gee.New()
-	r.Use(gee.Logger())
+	r := gee.Default()
+	r.GET("/panic", func(c *gee.Context) {
+		names := []string{"geektutu", "waylon"}
+		c.String(http.StatusOK, "name: %s\n", names[100])
+	})
 	r.SetFuncMap(template.FuncMap{
 		"FormatAsDate": FormatAsDate,
 	})
