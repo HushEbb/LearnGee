@@ -22,6 +22,8 @@ type Context struct {
 	// middleware
 	handlers []HandlerFunc
 	index    int
+	// engine pointer
+	engine *Engine
 }
 
 func newContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -87,11 +89,11 @@ func (c *Context) JSON(code int, obj interface{}) {
 		return
 	}
 
-	// 确认无错误后，设置状态码并写入数据
-	c.Status(code)
 	if _, err := c.Writer.Write(buff.Bytes()); err != nil {
 		// TODO: 处理写入错误（如记录日志）
 	}
+	// 确认无错误后，设置状态码并写入数据
+	c.Status(code)
 }
 
 func (c *Context) Data(code int, data []byte) {
@@ -99,8 +101,11 @@ func (c *Context) Data(code int, data []byte) {
 	c.Writer.Write(data)
 }
 
-func (c *Context) HTML(code int, html string) {
-	c.Writer.Header().Set("Content-Type", "text/html")
+func (c *Context) HTML(code int, name string, data interface{}) {
+	c.SetHeader("Content-Type", "text/html")
+	if err := c.engine.htmlTemplates.ExecuteTemplate(c.Writer, name, data); err != nil {
+		c.Fail(http.StatusInternalServerError, err.Error())
+		return
+	}
 	c.Status(code)
-	c.Writer.Write([]byte(html))
 }
